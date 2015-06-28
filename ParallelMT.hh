@@ -61,13 +61,13 @@ class ParallelMT {
 
 public:
 
-	ParallelMT(){}
-	ParallelMT(const int threads = 1,
+    ParallelMT(){}
+    ParallelMT(const int threads = 1,
         const unsigned long long first_seed = 19650218ULL);
-	~ParallelMT();
+    ~ParallelMT();
 
-	// access generators via function call with index checking
-	double RandomReal(const int thread) const;
+    // access generators via function call with index checking
+    double RandomReal(const int thread) const;
     double RandomReal(const int thread, const std::vector<double> &limits) const;
 
 protected:
@@ -77,7 +77,7 @@ protected:
 	int _threads;
 
 public:
-    
+
     // exposed exception object attached to ParallelMT
     class Error : public ErrorBase {
     public:
