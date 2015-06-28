@@ -1,30 +1,16 @@
+// Copyright (c) Geoffrey Lentner 2015. All Rights Reserved.
+// See LICENSE file (GPLv3)
+// Parallel.hh
 //
-// mt19937.hh
-//
-// Header file for the "mt19937" class.
-// This class is used to define instances of random number generators
-// using the 64-bit mt19937 algorithm developed by Nishimura and 
-// Matsumoto in 2004. Their original C code has been pushed into a 
-// C++ class. The necessary inclusions are provided at the end of
-// this header file.
-//
-// Copyright (C) Geoffrey Lentner 2014. All rights reserved.
-// See LICENCE file. (GPL v2.0)
-//
-// contact: Geoffrey Lentner, B.S.
-//          Graduate Student / Researcher
-//          LL15 Natural Science Building
-//          Department of Physics & Astronomy
-//          University of Louisville
-//          Louisville, KY 40292 USA
-//
-// email:   geoffrey.lentner@louisville.edu
-//
-// update:
-//
+// This header file contains the declarations for the MT19937 object and its
+// wrapper class ParallelMT
 
-#ifndef MT19937_HH
-#define MT19937_HH
+#ifndef _PARALLELMT_HH_
+#define _PARALLELMT_HH_
+
+#include <vector>
+#include <string>
+#include <exception>
 
 #define NN       312
 #define MM       156
@@ -32,44 +18,92 @@
 #define UM       0xFFFFFFFF80000000ULL //  most significant 33 bits
 #define LM       0x7FFFFFFFULL         // least significant 31 bits
 
-//  M E R S E N N E   T W I S T E R   P R N G   C L A S S   D E C L A R A T I O N    /
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - /
-class mt19937 {
-    
-    public:
+namespace MT {
 
-        // M E M B E R   V A R I A B L E S * * * * * * * * * * * * * * * * * * * * * /
-        unsigned long long mt[NN]; // the array for the state vector
-        int mti;                   // == NN+1 means mt[NN] uninitialized
-    
-        // M E M B E R   F U N C T I O N S * * * * * * * * * * * * * * * * * * * * * /
-		mt19937 ( ) { }                                    // default constructor
-		mt19937 ( unsigned long long seed = 19650218ULL ); // initialize by single ULL
-        mt19937 ( unsigned long long init_key[],
-                  unsigned long long key_length );         // initialize by array
-       ~mt19937 ( ) { } ;                                  // default destructor
-    
-        unsigned long long random_int ( void );
-        double random_real ( void );
+// base exception class for ParallelMT objects
+class ErrorBase : public std::exception {
+public:
+
+    explicit ErrorBase(const char *msg): _msg(msg){ }
+    explicit ErrorBase(const std::string& msg): _msg(msg){ }
+    virtual ~ErrorBase() throw() { }
+    virtual const char* what() const throw(){ return _msg.c_str(); }
+    std::string _msg;
 };
+
+// This is a 64-bit version of Mersenne Twister pseudorandom number
+// generator. Copyright (C) 2004, Makoto Matsumoto and Takuji Nishimura.
+// Please see the acknowledgement of use at the bottom of this file!
+class MT19937 {
+
+public:
+
+	MT19937(){}
+	// construct via single seed value
+	MT19937(unsigned long long seed = 19650218ULL);
+	// construct via array of seed values
+	MT19937(unsigned long long init_key[], unsigned long long key_length);
+	~MT19937(){};
+
+	unsigned long long RandomInteger();
+	double RandomReal();
+
+protected:
+
+	// the array for the state vector
+	unsigned long long mt[NN];
+	// == NN+1 means mt[NN] uninitialized
+	int mti;
+};
+
+// the following class manages an array of MT19937 objects
+class ParallelMT {
+
+public:
+
+	ParallelMT(){}
+	ParallelMT(const int threads = 1,
+        const unsigned long long first_seed = 19650218ULL);
+	~ParallelMT();
+
+	// access generators via function call with index checking
+	double RandomReal(const int thread) const;
+    double RandomReal(const int thread, const std::vector<double> &limits) const;
+
+protected:
+
+	void Cycle(unsigned long long init_key[], int key_length);
+	MT19937 **generator;
+	int _threads;
+
+public:
+    
+    // exposed exception object attached to ParallelMT
+    class Error : public ErrorBase {
+    public:
+    	Error(const std::string& msg): ErrorBase("\n --> ParallelMT::Error: " + msg){ }
+    };
+};
+
+} // namespace MT
 
 #endif
 
 // BELOW IS THE ACKNOWLEDGEMENT OF USE FOR THE ORIGINAL SOURCE OF
 // THE 64-BIT MERSENNE TWISTER PSEUDORANDOM NUMBER GENERATOR
 
-/* 
+/*
    A C-program for MT19937-64 (2004/9/29 version).
    Coded by Takuji Nishimura and Makoto Matsumoto.
 
    This is a 64-bit version of Mersenne Twister pseudorandom number
    generator.
 
-   Before using, initialize the state by using init_genrand64(seed)  
+   Before using, initialize the state by using init_genrand64(seed)
    or init_by_array64(init_key, key_length).
 
    Copyright (C) 2004, Makoto Matsumoto and Takuji Nishimura,
-   All rights reserved.                          
+   All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -82,8 +116,8 @@ class mt19937 {
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
 
-     3. The names of its contributors may not be used to endorse or promote 
-        products derived from this software without specific prior written 
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
         permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -100,12 +134,12 @@ class mt19937 {
 
    References:
    T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 10. (2000) 348--357.
    M. Matsumoto and T. Nishimura,
      ``Mersenne Twister: a 623-dimensionally equidistributed
        uniform pseudorandom number generator''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 8. (Jan. 1998) 3--30.
 
    Any feedback is very welcome.
