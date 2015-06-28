@@ -1,6 +1,6 @@
 #ParallelMT
 
-###A Parallel Pseudo Random Number Generator for Monte Carlo Applications.
+####A Parallel Pseudo Random Number Generator for Monte Carlo Applications.
 
 The ParallelMT class is an extension to the MT19937 class, both contained within a single MT
 namespace. MT19937 is adapted from the original 64-bit pseudo random number generator
